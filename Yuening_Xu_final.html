@@ -13,10 +13,11 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform vec4 lightPosition;
 uniform float shininess;
+uniform mat3 normalMatrix;
 
 void main() 
 {
-    vec3 pos = -(modelViewMatrix * vPosition).xyz;
+    vec3 pos = (modelViewMatrix * vPosition).xyz;
     vec3 light = lightPosition.xyz;
     vec3 L = normalize( light - pos );
 	
@@ -24,8 +25,9 @@ void main()
     vec3 H = normalize( L + E );
 
     // Transform vertex normal into eye coordinates
+
        
-    vec3 N = normalize( (modelViewMatrix*vNormal).xyz);
+    vec3 N = normalize(normalMatrix*vNormal.xyz);//should be normal matrix and 
 
     // Compute terms in the illumination equation
     vec4 ambient = ambientProduct;
@@ -40,7 +42,7 @@ void main()
 	specular = vec4(0.0, 0.0, 0.0, 1.0);
     } 
 
-    gl_Position = projectionMatrix*modelViewMatrix*vPosition;
+    gl_Position = projectionMatrix * modelViewMatrix * vPosition;
     //fColor = vColor;
     fColor = ambient + diffuse +specular;
     
@@ -64,7 +66,7 @@ main()
 <script type="text/javascript" src="../Common/webgl-utils.js"></script>
 <script type="text/javascript" src="../Common/initShaders.js"></script>
 <script type="text/javascript" src="../Common/MV.js"></script>
-<script type="text/javascript" src="Yuening_Xu_final.html"></script>
+<script type="text/javascript" src="Yuening_Xu_final.js"></script>
 
 <button id = "ButtonAM">10AM</button>
 <button id = "ButtonPM">5PM</button>

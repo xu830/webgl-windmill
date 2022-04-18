@@ -1,11 +1,12 @@
 var canvas;
 var gl;
 
-var NumVertices  = 36;
+var NumVertices  = 0;
+//36;//plus pynumvertices
+//var pyNumVertices = 12;
 
 var points = [];
 var normalsArray = [];
-
 
 
 var near = 0.2;
@@ -14,14 +15,14 @@ var far = 3.0;
 var  fovy = 50.0;  // Field-of-view in Y direction angle (in degrees)
 var  aspect;       // Viewport aspect ratio
 
-var modelViewMatrix, projectionMatrix;
+var modelViewMatrix, projectionMatrix, normalMatrix, normalMatrixLoc;
 var modelViewMatrixLoc, projectionMatrixLoc, lightpositionLoc;
 var eye;
-const at = vec3(1, 0.0, 0.0);
-const up = vec3(0.0, 1.0, 0.0);
+const at = vec3(0.5, 0.0, 0.0);
+const up = vec3(0.0, 0.5, 0.0);
 
 //I'll assume the building's color(material) and light color doesn't change, only the light sources' position will change.
-var lightPosition = vec4(-2, -5.5, 0.6, 0.0, 0.0);
+var lightPosition = vec4(-0.5, 4.5, 0.4, 0.0);
 var lightAmbient = vec4(1.0, 1.0, 1.0, 1.0 );
 var lightDiffuse = vec4( 1.0, 1.0, 1.0, 1.0 );
 var lightSpecular = vec4( 1.0, 1.0, 1.0, 1.0 );
@@ -56,6 +57,7 @@ window.onload = function init() {
     gl.useProgram( program );
     
     colorCube();
+    colorPyramid();
 
     var nBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, nBuffer );
@@ -76,13 +78,14 @@ window.onload = function init() {
     modelViewMatrixLoc = gl.getUniformLocation( program, "modelViewMatrix" );
     projectionMatrixLoc = gl.getUniformLocation( program, "projectionMatrix" );
     lightpositionLoc = gl.getUniformLocation(program, "lightPosition");
+    normalMatrixLoc = gl.getUniformLocation( program, "normalMatrix" );
 
     var ambientProduct = mult(lightAmbient, materialAmbient);
     var diffuseProduct = mult(lightDiffuse, materialDiffuse);
     var specularProduct = mult(lightSpecular, materialSpecular);
     
     document.getElementById("ButtonAM").onclick = function(){lightPosition = vec4(2.0, 4.0, 0.9, 0.0);};
-    document.getElementById("ButtonPM").onclick = function(){lightPosition = vec4(-2, -5.5, 0.6, 0.0);};
+    document.getElementById("ButtonPM").onclick = function(){lightPosition = vec4(-0.5, 4.5, 0.4, 0.0);};
 
 
     gl.uniform4fv(gl.getUniformLocation(program, "ambientProduct"),
@@ -113,14 +116,14 @@ function colorCube()
 
 function quad(a, b, c, d) {
     var vertices = [
-        vec4(-0.75, -0.4,  1.5, 1.0),
-        vec4(-0.75,  0.4,  1.5, 1.0),
-        vec4(0.75,  0.4,  1.5, 1.0),
-        vec4(0.75, -0.4,  1.5, 1.0),
-        vec4(-0.75, -0.4, 0.5, 1.0),
-        vec4(-0.75,  0.4, 0.5, 1.0),
-        vec4(0.75,  0.4, 0.5, 1.0),
-        vec4( 0.75, -0.4, 0.5, 1.0)
+        vec4(-0.4, -0.8,  1.0, 1.0),
+        vec4(-0.4,  0.4,  1.0, 1.0),
+        vec4(0.5,  0.4,  1.0, 1.0),
+        vec4(0.5, -0.8,  1.0, 1.0),
+        vec4(-0.4, -0.8, 0.2, 1.0),
+        vec4(-0.4,  0.4, 0.2, 1.0),
+        vec4(0.5,  0.4, 0.2, 1.0),
+        vec4( 0.5, -0.8, 0.2, 1.0)
     ];
     
      
@@ -134,14 +137,48 @@ function quad(a, b, c, d) {
     for ( var i = 0; i < indices.length; ++i ) {
         points.push( vertices[indices[i]] );
         normalsArray.push(normal);
-        //colors.push( vertexColors[indices[i]] );
+        NumVertices++;
 
-        // for solid colored faces use
-        //colors.push(vertexColors[a]);
-
+        //calculate numof vertices here!
     }
 }
 
+function colorPyramid(){
+    tri(0, 1, 2);
+    tri(0, 2, 3);
+    tri(0, 3, 4);
+    //tri(0, 4, 1);
+    tri(4, 3, 5);
+    tri(4, 5, 0);
+    tri(0, 5, 1)
+}
+function tri(a, b, c){
+    var vertices = [
+        vec4(0.05, 0.9,  1.0, 1.0),
+        vec4(-0.4, 0.4,  1.0, 1.0),
+        vec4(0.5, 0.4,  1.0, 1.0),
+        vec4(0.5,  0.4, 0.2, 1.0),
+        vec4(0.05, 0.9, 0.2, 1.0),
+        vec4(-0.4,  0.4, 0.2, 1.0),
+        
+    ]
+
+    var indices = [a, b, c];
+    var t1 = subtract(vertices[b], vertices[a]);
+    var t2 = subtract(vertices[c], vertices[b]);
+    var normal = cross(t1, t2);
+    var normal = vec3(normal);
+
+    for ( var i = 0; i < indices.length; ++i ) {
+        points.push( vertices[indices[i]] );
+        normalsArray.push(normal);
+        //calculate numof vertices here!
+        NumVertices++;
+    }
+
+}
+
+var stack = [];
 
 var render = function(){
     setTimeout(function(){
@@ -149,14 +186,23 @@ var render = function(){
         gl.uniform4fv(lightpositionLoc, flatten(lightPosition) );   
         //eye = vec3(radius*Math.sin(theta)*Math.cos(phi), 
         //    radius*Math.sin(theta)*Math.sin(phi), radius*Math.cos(theta));
-        eye = vec3(-1.8, -0.28, 2.7);
+        eye = vec3(-1.6, 0, 3);
 
         modelViewMatrix = lookAt(eye, at , up);
         projectionMatrix = perspective(fovy, aspect, near, far);
 
+        normalMatrix = [
+            vec3(modelViewMatrix[0][0], modelViewMatrix[0][1], modelViewMatrix[0][2]),
+            vec3(modelViewMatrix[1][0], modelViewMatrix[1][1], modelViewMatrix[1][2]),
+            vec3(modelViewMatrix[2][0], modelViewMatrix[2][1], modelViewMatrix[2][2])
+        ];
+
         gl.uniformMatrix4fv( modelViewMatrixLoc, false, flatten(modelViewMatrix) );
         gl.uniformMatrix4fv( projectionMatrixLoc, false, flatten(projectionMatrix) );
-        gl.drawArrays( gl.TRIANGLES, 0, NumVertices );
+        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix) );
+        gl.drawArrays( gl.TRIANGLES, 0, NumVertices);
+        
+        //drawcone();
         requestAnimFrame(render);
     }, 10);
 
