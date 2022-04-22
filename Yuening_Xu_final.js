@@ -14,14 +14,14 @@ var far = 3.0;
 var  fovy = 50.0;  // Field-of-view in Y direction angle (in degrees)
 var  aspect;       // Viewport aspect ratio
 
-var modelViewMatrix, projectionMatrix, normalMatrix, normalMatrixLoc;
+var modelViewMatrix, projectionMatrix, normalMatrix_v, normalMatrixLoc;
 var modelViewMatrixLoc, projectionMatrixLoc, lightpositionLoc;
 var eye;
 const at = vec3(0.5, 0.0, 0.0);
 const up = vec3(0.0, 0.5, 0.0);
 
 //I'll assume the building's color(material) and light color doesn't change, only the light sources' position will change.
-var lightPosition = vec4(-0.7, 3.0, 0.0, 0.0);
+var lightPosition = vec4(0.5, 4.0, -0.5, 0.0);
 var lightAmbient = vec4(1.0, 1.0, 1.0, 1.0 );
 var lightDiffuse = vec4( 1.0, 1.0, 1.0, 1.0 );
 var lightSpecular = vec4( 1.0, 1.0, 1.0, 1.0 );
@@ -132,6 +132,8 @@ function quad(a, b, c, d) {
 
     var t1 = subtract(vertices[b], vertices[a]);
     var t2 = subtract(vertices[c], vertices[b]);
+    t1 = normalize(vec3(t1));
+    t2 = normalize(vec3(t2));
     var normal = cross(t1, t2);
     var normal = vec3(normal);
 
@@ -167,6 +169,8 @@ function tri(a, b, c){
     var indices = [a, b, c];
     var t1 = subtract(vertices[b], vertices[a]);
     var t2 = subtract(vertices[c], vertices[b]);
+    t1 = normalize(vec3(t1));
+    t2 = normalize(vec3(t2));
     var normal = cross(t1, t2);
     var normal = vec3(normal);
 
@@ -205,6 +209,9 @@ function quad_a(a, b, c, d) {
 
     var t1 = subtract(vertices[b], vertices[a]);
     var t2 = subtract(vertices[c], vertices[b]);
+    //normalize t1, t2
+    t1 = normalize(vec3(t1));
+    t2 = normalize(vec3(t2));
     var normal = cross(t1, t2);
     var normal = vec3(normal);
 
@@ -218,7 +225,8 @@ function quad_a(a, b, c, d) {
 }
 
 function calcnormalM(modelViewMatrix){
-    normalMatrix = [
+    //console.debug(modelViewMatrix);
+    normalMatrix_v = [
         vec3(modelViewMatrix[0][0], modelViewMatrix[0][1], modelViewMatrix[0][2]),
         vec3(modelViewMatrix[1][0], modelViewMatrix[1][1], modelViewMatrix[1][2]),
         vec3(modelViewMatrix[2][0], modelViewMatrix[2][1], modelViewMatrix[2][2])
@@ -233,8 +241,9 @@ function drawarticulate(modelViewMatrix){
         
         modelViewMatrix = mult(modelViewMatrix, rotate(theta + i * 90, 0, 0, 1 ));
         gl.uniformMatrix4fv( modelViewMatrixLoc, false, flatten(modelViewMatrix) );
-        calcnormalM(modelViewMatrix);
-        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix) );
+        normalMatrix_v = normalMatrix(modelViewMatrix, true);
+        //calcnormalM(modelViewMatrix);
+        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix_v) );
         gl.drawArrays( gl.TRIANGLES, NumVertices, NumV_art);
     }
 }
@@ -250,10 +259,11 @@ var render = function(){
         modelViewMatrix = lookAt(eye, at , up);
         projectionMatrix = perspective(fovy, aspect, near, far);
 
-        calcnormalM(modelViewMatrix);
+        //calcnormalM(modelViewMatrix);
+        normalMatrix_v = normalMatrix(modelViewMatrix, true);
         gl.uniformMatrix4fv( modelViewMatrixLoc, false, flatten(modelViewMatrix) );
         gl.uniformMatrix4fv( projectionMatrixLoc, false, flatten(projectionMatrix) );
-        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix) );
+        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix_v) );
         gl.drawArrays( gl.TRIANGLES, 0, NumVertices);
 
         //set the articulate's y value according to base's height
