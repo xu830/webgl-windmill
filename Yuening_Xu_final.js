@@ -3,6 +3,7 @@ var gl;
 
 var NumVertices  = 0;
 var NumV_art = 0;
+var NumV_fans = 0;
 
 var points = [];
 var normalsArray = [];
@@ -21,7 +22,7 @@ const at = vec3(0.5, 0.0, 0.0);
 const up = vec3(0.0, 0.5, 0.0);
 
 //I'll assume the building's color(material) and light color doesn't change, only the light sources' position will change.
-var lightPosition = vec4(0.5, 4.0, -0.5, 0.0);
+var lightPosition = vec4(0.7, 6.0, -0.5, 1.0);
 var lightAmbient = vec4(1.0, 1.0, 1.0, 1.0 );
 var lightDiffuse = vec4( 1.0, 1.0, 1.0, 1.0 );
 var lightSpecular = vec4( 1.0, 1.0, 1.0, 1.0 );
@@ -49,7 +50,7 @@ window.onload = function init() {
     
     gl.enable(gl.DEPTH_TEST);
     
-
+    
     //
     //  Load shaders and initialize attribute buffers
     //
@@ -58,7 +59,8 @@ window.onload = function init() {
     
     colorCube();
     colorPyramid();
-    articulate()
+    articulate();
+    fans();
 
     var nBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, nBuffer );
@@ -85,8 +87,8 @@ window.onload = function init() {
     var diffuseProduct = mult(lightDiffuse, materialDiffuse);
     var specularProduct = mult(lightSpecular, materialSpecular);
     
-    document.getElementById("ButtonAM").onclick = function(){lightPosition = vec4(2.0, 1.0, 2.0, 0.0);};
-    document.getElementById("ButtonPM").onclick = function(){lightPosition = vec4(-0.8, 2.0, -1.0, 0.0);};
+    //document.getElementById("ButtonAM").onclick = function(){lightPosition = vec4(2.0, 1.0, 2.0, 0.0);};
+    //document.getElementById("ButtonPM").onclick = function(){lightPosition = vec4(-0.8, 2.0, -1.0, 0.0);};
 
 
     gl.uniform4fv(gl.getUniformLocation(program, "ambientProduct"),
@@ -224,6 +226,48 @@ function quad_a(a, b, c, d) {
     }
 }
 
+function fans()
+{
+    quad_f( 1, 0, 3, 2 );
+    quad_f( 2, 3, 7, 6 );
+    quad_f( 3, 0, 4, 7 );
+    quad_f( 6, 5, 1, 2 );
+    quad_f( 4, 5, 6, 7 );
+    quad_f( 5, 4, 0, 1 );
+}
+
+function quad_f(a, b, c, d) {
+    var vertices = [
+        vec4(-0.5, -0.05,  1.4, 1.0),
+        vec4(-0.5,  0.1,  1.4, 1.0),
+        vec4(0.0,  0.05,  1.4, 1.0),
+        vec4(0.0, 0.0,  1.4, 1.0),
+        vec4(-0.5, -0.05, 1.2, 1.0),
+        vec4(-0.5,  0.1, 1.2, 1.0),
+        vec4(0.0,  0.05, 1.2, 1.0),
+        vec4( 0.0, 0.0, 1.2, 1.0)
+    ];
+    
+     
+    var indices = [ a, b, c, a, c, d ];
+
+    var t1 = subtract(vertices[b], vertices[a]);
+    var t2 = subtract(vertices[c], vertices[b]);
+    //normalize t1, t2
+    t1 = normalize(vec3(t1));
+    t2 = normalize(vec3(t2));
+    var normal = cross(t1, t2);
+    var normal = vec3(normal);
+
+    for ( var i = 0; i < indices.length; ++i ) {
+        points.push( vertices[indices[i]] );
+        normalsArray.push(normal);
+        NumV_fans++;
+
+        //calculate numof vertices here!
+    }
+}
+
 function calcnormalM(modelViewMatrix){
     //console.debug(modelViewMatrix);
     normalMatrix_v = [
@@ -233,9 +277,9 @@ function calcnormalM(modelViewMatrix){
     ];
 }
 
-function drawarticulate(modelViewMatrix){
+function drawarticulate(){
     var baseMVM = modelViewMatrix;
-    //theta += 0.7;
+    //theta += 0.4;
     for(var i = 0; i < 4; i++){
         modelViewMatrix = mult(baseMVM, translate(0.0, 0.5, 0.0));
         
@@ -245,6 +289,17 @@ function drawarticulate(modelViewMatrix){
         //calcnormalM(modelViewMatrix);
         gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix_v) );
         gl.drawArrays( gl.TRIANGLES, NumVertices, NumV_art);
+    }
+    modelViewMatrix = mult(modelViewMatrix, rotate(theta + 90, 0, 0, 1 ));
+}
+
+function drawfans(){
+    for(var i = 0; i < 4; i++){        
+        modelViewMatrix = mult(modelViewMatrix, rotate(i * 90, 0, 0, 1 ));
+        gl.uniformMatrix4fv( modelViewMatrixLoc, false, flatten(modelViewMatrix) );
+        normalMatrix_v = normalMatrix(modelViewMatrix, true);
+        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix_v) );
+        gl.drawArrays( gl.TRIANGLES, NumVertices + NumV_art, NumV_fans);
     }
 }
 
@@ -266,9 +321,8 @@ var render = function(){
         gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix_v) );
         gl.drawArrays( gl.TRIANGLES, 0, NumVertices);
 
-        //set the articulate's y value according to base's height
-        drawarticulate(modelViewMatrix);
-        
+        drawarticulate();
+        drawfans();
         requestAnimFrame(render);
     }, 10);
 
